@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101a10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="STALKER PDA">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>STALKER PDA</title>
+<style>
+:root{--g:#a7d879;--gd:#638c46;--bg:#080d09;--panel:#111b12;--line:#3d5835;--muted:#718b63;--red:#d36b55}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% 0,#1a2a19 0,#080d09 60%);color:var(--g);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;min-height:100vh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.app{max-width:650px;margin:auto;min-height:100vh;display:flex;flex-direction:column}
+header{padding:17px 16px 12px;background:#080d09dd;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:3}
+.brand{font-size:10px;letter-spacing:2px;color:var(--muted)}h1{font-size:21px;margin:5px 0 10px;letter-spacing:1px}
+.statusline{display:flex;align-items:center;gap:8px;font-size:10px}.spacer{flex:1}.led{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 8px currentColor}.led.on{background:var(--g)}
+main{padding:14px;flex:1}.page{display:none}.page.active{display:block}
+.panel{background:linear-gradient(145deg,#142015,#0d150e);border:1px solid var(--line);border-radius:5px;padding:13px;margin-bottom:13px;box-shadow:inset 0 0 20px #0005}
+.panel h2{font-size:11px;letter-spacing:1px;margin:0 0 13px;color:#c0e59d}
+.panel h2:before{content:"▌ ";color:var(--g)}
+.muted{color:var(--muted);font-size:11px}.big{font-size:16px;font-weight:bold}
+button,input{font:inherit;color:var(--g)}button{background:#1b2c1b;border:1px solid var(--gd);border-radius:4px;padding:11px 12px;cursor:pointer}
+button:active{background:#314b2a}.wide{width:100%;margin-top:12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.metric{background:#080e09;padding:12px;border:1px solid #293c27}.metric label{display:block;color:var(--muted);font-size:9px;margin-bottom:8px}.metric strong{font-size:19px}
+.relay{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #30432c}.relay:last-child{border:0}
+.switch{width:48px;height:27px;border:1px solid var(--gd);border-radius:20px;background:#080d09;position:relative;padding:0}
+.switch:after{content:"";position:absolute;width:19px;height:19px;border-radius:50%;left:3px;top:3px;background:#61745a;transition:.15s}
+.switch.on{background:#304d28}.switch.on:after{left:24px;background:var(--g);box-shadow:0 0 8px var(--g)}
+nav{display:grid;grid-template-columns:repeat(4,1fr);background:#080d09;border-top:1px solid var(--line);position:sticky;bottom:0;padding-bottom:env(safe-area-inset-bottom)}
+nav button{border:0;border-radius:0;background:transparent;padding:12px 2px;color:var(--muted);font-size:9px}
+nav button.active{color:var(--g);background:#1a2a19}
+nav span{display:block;font-size:18px;margin-bottom:5px}
+input{width:100%;background:#080d09;border:1px solid var(--line);padding:12px;border-radius:4px;margin-top:8px}
+.log{font-size:10px;padding:8px 0;border-bottom:1px solid #263624;overflow-wrap:anywhere}
+.warn{color:var(--red);font-size:11px;margin-top:10px}
+.scan{height:1px;background:#a7d87944;box-shadow:0 0 8px #a7d879;animation:scan 4s linear infinite;margin:8px 0}
+@keyframes scan{0%{opacity:.2}50%{opacity:1}100%{opacity:.2}}
+footer{text-align:center;padding:8px;color:#53674a;font-size:8px;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+ <div class="brand">PERSONAL DATA ASSISTANT // FIELD UNIT</div>
+ <h1>STALKER PDA <small style="font-size:10px;color:var(--muted)">v1.0</small></h1>
+ <div class="statusline"><i id="led" class="led"></i><b id="conn">НЕТ СИГНАЛА</b><span class="spacer"></span><span id="clock">--:--:--</span></div>
+</header>
+<main>
+<section id="status" class="page active">
+ <div class="panel"><h2>СОСТОЯНИЕ СИСТЕМЫ</h2><div class="big" id="state">КОНТРОЛЛЕР НЕ ОТВЕЧАЕТ</div><div class="muted" id="addrline">192.168.4.1</div><div class="scan"></div><button class="wide" onclick="refreshStatus()">⟳ ПРОВЕРИТЬ СВЯЗЬ</button><div id="error" class="warn"></div></div>
+ <div class="panel"><h2>ТЕЛЕМЕТРИЯ</h2><div class="grid"><div class="metric"><label>ТЕМПЕРАТУРА</label><strong id="temp">--.- °C</strong></div><div class="metric"><label>ВЛАЖНОСТЬ</label><strong id="hum">--.- %</strong></div></div></div>
+ <div class="panel"><h2>БЫСТРЫЙ ДОСТУП</h2><div class="grid" id="quick"></div></div>
+</section>
+<section id="control" class="page">
+ <div class="panel"><h2>УПРАВЛЕНИЕ ВЫХОДАМИ</h2><p class="muted">КОМАНДЫ ПЕРЕДАЮТСЯ НА КОНТРОЛЛЕР</p><div id="relays"></div></div>
+</section>
+<section id="sensors" class="page">
+ <div class="panel"><h2>ПОКАЗАНИЯ ДАТЧИКОВ</h2><div class="relay"><span>ТЕМПЕРАТУРА</span><b id="temp2">НЕТ ДАННЫХ</b></div><div class="relay"><span>ВЛАЖНОСТЬ</span><b id="hum2">НЕТ ДАННЫХ</b></div><div class="relay"><span>СВЯЗЬ</span><b id="conn2">ОТСУТСТВУЕТ</b></div><button class="wide" onclick="refreshStatus()">ОБНОВИТЬ ДАННЫЕ</button></div>
+</section>
+<section id="journal" class="page">
+ <div class="panel"><h2>СИСТЕМНЫЙ ЖУРНАЛ</h2><div id="logs"></div></div>
+</section>
+</main>
+<nav>
+ <button class="active" data-tab="status"><span>◉</span>СТАТУС</button>
+ <button data-tab="control"><span>⏻</span>УПРАВЛЕНИЕ</button>
+ <button data-tab="sensors"><span>⌁</span>ДАТЧИКИ</button>
+ <button data-tab="journal"><span>▤</span>ЖУРНАЛ</button>
+</nav>
+<footer>ZONE NETWORK // KEEP YOUR DEVICE CLOSE</footer>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+let host=localStorage.getItem('pdaHost')||'http://192.168.4.1';
+let relayStates=[false,false,false,false],logs=[];
+function log(s){let d=new Date().toLocaleTimeString('ru-RU');logs.unshift(`[${d}] ${s}`);logs=logs.slice(0,60);$('logs').innerHTML=logs.map(x=>`<div class="log">${x}</div>`).join('')}
+function setConnection(ok){$('led').classList.toggle('on',ok);$('conn').textContent=ok?'СИГНАЛ ЕСТЬ':'НЕТ СИГНАЛА';$('state').textContent=ok?'КОНТРОЛЛЕР НАЙДЕН':'КОНТРОЛЛЕР НЕ ОТВЕЧАЕТ';$('conn2').textContent=ok?'НОРМА':'ОТСУТСТВУЕТ'}
+function drawRelays(){
+ $('relays').innerHTML=relayStates.map((v,i)=>`<div class="relay"><div><b>КАНАЛ РЕЛЕ ${i+1}</b><div class="muted">${v?'СОСТОЯНИЕ: ВКЛЮЧЕНО':'СОСТОЯНИЕ: ОТКЛЮЧЕНО'}</div></div><button class="switch ${v?'on':''}" aria-label="Реле ${i+1}" onclick="toggleRelay(${i})"></button></div>`).join('');
+ $('quick').innerHTML=relayStates.map((v,i)=>`<div class="metric"><label>РЕЛЕ ${i+1}</label><strong>${v?'● ON':'○ OFF'}</strong></div>`).join('');
+}
+async function refreshStatus(){
+ $('error').textContent='';$('addrline').textContent=host;
+ try{
+  let r=await fetch(host.replace(/\/$/,'')+'/api/status',{cache:'no-store',signal:AbortSignal.timeout(4500)});
+  if(!r.ok)throw Error('HTTP '+r.status);
+  let d=await r.json();setConnection(d.connected!==false);
+  if(typeof d.temperature==='number'){$('temp').textContent=d.temperature.toFixed(1)+' °C';$('temp2').textContent=d.temperature.toFixed(1)+' °C'}
+  if(typeof d.humidity==='number'){$('hum').textContent=d.humidity.toFixed(1)+' %';$('hum2').textContent=d.humidity.toFixed(1)+' %'}
+  if(Array.isArray(d.relays)){relayStates=d.relays.slice(0,4).map(Boolean);while(relayStates.length<4)relayStates.push(false);drawRelays()}
+  log('СВЯЗЬ УСТАНОВЛЕНА • ДАННЫЕ ПОЛУЧЕНЫ');
+ }catch(e){setConnection(false);$('error').textContent='ОШИБКА СВЯЗИ. ПРОВЕРЬТЕ WI-FI И IP.';log('НЕТ СВЯЗИ С КОНТРОЛЛЕРОМ')}
+}
+async function toggleRelay(i){
+ let desired=!relayStates[i];
+ try{
+  let r=await fetch(host.replace(/\/$/,'')+'/api/relay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:i+1,state:desired}),signal:AbortSignal.timeout(4500)});
+  if(!r.ok)throw Error('HTTP '+r.status);
+  relayStates[i]=desired;drawRelays();log(`РЕЛЕ ${i+1}: ${desired?'ВКЛЮЧЕНО':'ВЫКЛЮЧЕНО'}`);
+ }catch(e){$('error').textContent='КОМАНДА НЕ ВЫПОЛНЕНА';log(`ОШИБКА УПРАВЛЕНИЯ РЕЛЕ ${i+1}`)}
+}
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(b.dataset.tab).classList.add('active')}));
+$('clock').textContent=new Date().toLocaleTimeString('ru-RU');setInterval(()=>$('clock').textContent=new Date().toLocaleTimeString('ru-RU'),1000);
+drawRelays();log('СИСТЕМА ЗАПУЩЕНА');log('ОЖИДАНИЕ СВЯЗИ С КОНТРОЛЛЕРОМ');
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+</script>
+</body></html>
